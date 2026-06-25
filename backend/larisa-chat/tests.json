@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Chat with Larisa",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "messages": [
+          { "role": "user", "content": "Привет! Как тебя зовут?" }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedBody": { "reply": "string" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
