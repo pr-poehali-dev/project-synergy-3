@@ -1,42 +1,43 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import Icon from "@/components/ui/icon"
 
 const features = [
   {
-    title: "Адаптивная нейрообработка",
-    description: "Самооптимизирующиеся алгоритмы, которые обучаются на нейронных паттернах и улучшают интерпретацию сигналов.",
-    icon: "brain",
+    title: "Голос через микрофон",
+    description: "Задайте вопрос вслух — Лариса мгновенно распознаёт речь и отвечает живым нежным женским голосом.",
+    icon: "Mic",
+    badge: "Голос",
+  },
+  {
+    title: "Текстовый ввод",
+    description: "Не хотите говорить вслух? Напишите вопрос в строке — и Лариса озвучит ответ красивым голосом.",
+    icon: "MessageSquare",
+    badge: "Чат",
+  },
+  {
+    title: "Управление компьютером",
+    description: "Открыть программу, найти файл, включить музыку — Лариса выполняет команды по голосу за вас.",
+    icon: "MonitorSmartphone",
+    badge: "Команды",
+  },
+  {
+    title: "Нежный женский голос",
+    description: "Приятное естественное звучание, которое делает общение тёплым и комфортным в любой ситуации.",
+    icon: "Volume2",
+    badge: "Озвучка",
+  },
+  {
+    title: "Ответы на любые вопросы",
+    description: "Лариса отвечает на вопросы любого формата — от бытовых до сложных, понятно и по делу.",
+    icon: "Sparkles",
     badge: "ИИ",
   },
   {
-    title: "Медицинская защита",
-    description: "Шифрование по стандартам FDA со сквозной защитой конфиденциальных нейронных данных.",
-    icon: "lock",
-    badge: "Сертификат",
-  },
-  {
-    title: "Интуитивное управление",
-    description: "Естественная трансляция мыслей в действия с откликом менее миллисекунды и точностью 99,7%.",
-    icon: "globe",
-    badge: "Точность",
-  },
-  {
-    title: "Предиктивная калибровка",
-    description: "ML-модели, которые предугадывают намерения пользователя и оптимизируют нейронные пути.",
-    icon: "zap",
-    badge: "Умный",
-  },
-  {
-    title: "Биометрическая интеграция",
-    description: "Бесшовная синхронизация с мониторингом жизненных показателей для контроля здоровья.",
-    icon: "link",
-    badge: "Связь",
-  },
-  {
-    title: "Поддержка XR",
-    description: "Нативная совместимость с AR/VR-средами для терапевтических и рабочих приложений.",
-    icon: "target",
-    badge: "XR Ready",
+    title: "Живой диалог",
+    description: "Лариса помнит контекст беседы и поддерживает естественный разговор, как настоящий собеседник.",
+    icon: "MessagesSquare",
+    badge: "Диалог",
   },
 ]
 
@@ -45,9 +46,9 @@ export function FeaturesSection() {
     <section className="py-24 px-6 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-foreground mb-4 font-sans">Возможности нового поколения</h2>
+          <h2 className="text-4xl font-bold text-foreground mb-4 font-sans">Что умеет Лариса</h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Почувствуйте будущее с технологиями, которые переопределяют возможное
+            Голос, текст и управление компьютером — всё в одном умном помощнике
           </p>
         </div>
 
@@ -60,13 +61,8 @@ export function FeaturesSection() {
             >
               <CardHeader>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-3xl">
-                    {feature.icon === "brain" && "&#129504;"}
-                    {feature.icon === "lock" && "&#128274;"}
-                    {feature.icon === "globe" && "&#127760;"}
-                    {feature.icon === "zap" && "&#9889;"}
-                    {feature.icon === "link" && "&#128279;"}
-                    {feature.icon === "target" && "&#127919;"}
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
+                    <Icon name={feature.icon} size={26} />
                   </span>
                   <Badge variant="secondary" className="bg-accent text-accent-foreground">
                     {feature.badge}
