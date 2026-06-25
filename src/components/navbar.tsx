@@ -20,6 +20,12 @@ export function Navbar() {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-8">
               <a
+                href="#chat"
+                className="font-geist text-white hover:text-red-500 transition-colors duration-200"
+              >
+                Чат
+              </a>
+              <a
                 href="#technology"
                 className="font-geist text-white hover:text-red-500 transition-colors duration-200"
               >

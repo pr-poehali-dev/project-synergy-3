@@ -145,32 +145,96 @@ export const Hero3DWebGL = () => {
         <div className="absolute top-0 bottom-0 right-0 w-32 bg-gradient-to-l from-black to-transparent" />
       </div>
 
-      <div className="h-screen uppercase items-center w-full absolute z-[60] pointer-events-none px-10 flex justify-center flex-col">
-        <div className="text-3xl md:text-5xl xl:text-6xl 2xl:text-7xl font-extrabold font-orbitron">
-          <div className="flex space-x-2 lg:space-x-6 overflow-hidden text-white">
-            {titleWords.map((word, index) => (
+      <div className="h-screen w-full absolute z-[60] pointer-events-none px-6 flex items-center justify-center">
+        <div className="flex flex-col md:flex-row items-center gap-10 md:gap-16 w-full max-w-6xl">
+          {/* Left: text */}
+          <div className="flex-1 flex flex-col items-start">
+            {/* Neural network badge */}
+            <div className="flex items-center gap-2 mb-6">
+              <div className="relative w-10 h-10">
+                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
+                  <circle cx="8" cy="8" r="3" fill="#ef4444" opacity="0.9"/>
+                  <circle cx="32" cy="8" r="3" fill="#ef4444" opacity="0.9"/>
+                  <circle cx="8" cy="32" r="3" fill="#ef4444" opacity="0.9"/>
+                  <circle cx="32" cy="32" r="3" fill="#ef4444" opacity="0.9"/>
+                  <circle cx="20" cy="20" r="4" fill="#ef4444"/>
+                  <circle cx="20" cy="6" r="2.5" fill="#ff6b6b" opacity="0.8"/>
+                  <circle cx="20" cy="34" r="2.5" fill="#ff6b6b" opacity="0.8"/>
+                  <circle cx="6" cy="20" r="2.5" fill="#ff6b6b" opacity="0.8"/>
+                  <circle cx="34" cy="20" r="2.5" fill="#ff6b6b" opacity="0.8"/>
+                  <line x1="8" y1="8" x2="20" y2="20" stroke="#ef4444" strokeWidth="1" opacity="0.5"/>
+                  <line x1="32" y1="8" x2="20" y2="20" stroke="#ef4444" strokeWidth="1" opacity="0.5"/>
+                  <line x1="8" y1="32" x2="20" y2="20" stroke="#ef4444" strokeWidth="1" opacity="0.5"/>
+                  <line x1="32" y1="32" x2="20" y2="20" stroke="#ef4444" strokeWidth="1" opacity="0.5"/>
+                  <line x1="20" y1="6" x2="20" y2="20" stroke="#ff6b6b" strokeWidth="1" opacity="0.4"/>
+                  <line x1="20" y1="34" x2="20" y2="20" stroke="#ff6b6b" strokeWidth="1" opacity="0.4"/>
+                  <line x1="6" y1="20" x2="20" y2="20" stroke="#ff6b6b" strokeWidth="1" opacity="0.4"/>
+                  <line x1="34" y1="20" x2="20" y2="20" stroke="#ff6b6b" strokeWidth="1" opacity="0.4"/>
+                  <line x1="8" y1="8" x2="32" y2="8" stroke="#ef4444" strokeWidth="0.5" opacity="0.3"/>
+                  <line x1="8" y1="32" x2="32" y2="32" stroke="#ef4444" strokeWidth="0.5" opacity="0.3"/>
+                  <line x1="8" y1="8" x2="8" y2="32" stroke="#ef4444" strokeWidth="0.5" opacity="0.3"/>
+                  <line x1="32" y1="8" x2="32" y2="32" stroke="#ef4444" strokeWidth="0.5" opacity="0.3"/>
+                </svg>
+              </div>
+              <span className="text-red-400 text-sm font-orbitron tracking-widest uppercase opacity-80">Neural AI</span>
+            </div>
+
+            <div className="text-4xl md:text-6xl xl:text-7xl font-extrabold font-orbitron uppercase">
+              <div className="flex space-x-2 lg:space-x-4 overflow-hidden text-white">
+                {titleWords.map((word, index) => (
+                  <div
+                    key={index}
+                    className={index < visibleWords ? "fade-in" : ""}
+                    style={{
+                      animationDelay: `${index * 0.13 + (delays[index] || 0)}s`,
+                      opacity: index < visibleWords ? undefined : 0,
+                    }}
+                  >
+                    {word}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-sm md:text-lg xl:text-xl mt-4 text-white/80 font-normal max-w-md leading-relaxed">
               <div
-                key={index}
-                className={index < visibleWords ? "fade-in" : ""}
+                className={subtitleVisible ? "fade-in-subtitle" : ""}
                 style={{
-                  animationDelay: `${index * 0.13 + (delays[index] || 0)}s`,
-                  opacity: index < visibleWords ? undefined : 0,
+                  animationDelay: `${titleWords.length * 0.13 + 0.2 + subtitleDelay}s`,
+                  opacity: subtitleVisible ? undefined : 0,
                 }}
               >
-                {word}
+                {subtitle}
               </div>
-            ))}
+            </div>
+
+            <div
+              className={`mt-8 flex items-center gap-3 ${subtitleVisible ? "fade-in-subtitle" : ""}`}
+              style={{ opacity: subtitleVisible ? undefined : 0 }}
+            >
+              <div className="flex items-center gap-2 bg-red-500/20 border border-red-500/40 rounded-full px-4 py-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-red-400 text-xs font-orbitron tracking-wider">СЛУШАЕТ</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2">
+                <span className="text-white/60 text-xs font-orbitron tracking-wider">ГОЛОС + ТЕКСТ</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="text-xs md:text-xl xl:text-2xl 2xl:text-3xl mt-2 overflow-hidden text-white font-bold max-w-4xl mx-auto text-center px-4">
-          <div
-            className={subtitleVisible ? "fade-in-subtitle" : ""}
-            style={{
-              animationDelay: `${titleWords.length * 0.13 + 0.2 + subtitleDelay}s`,
-              opacity: subtitleVisible ? undefined : 0,
-            }}
-          >
-            {subtitle}
+
+          {/* Right: image */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="relative w-72 h-72 md:w-96 md:h-96">
+              <div className="absolute inset-0 rounded-full bg-red-500/10 blur-3xl animate-pulse" />
+              <div className="absolute inset-4 rounded-full border border-red-500/20" />
+              <div className="absolute inset-8 rounded-full border border-red-500/10" />
+              <img
+                src="https://cdn.poehali.dev/projects/7b17ffed-f51e-4b7c-accb-5f100f138104/files/83afe7d7-dbba-4cb0-b37d-5f4e014ca630.jpg"
+                alt="Лариса — голосовой помощник"
+                className="absolute inset-0 w-full h-full object-cover rounded-full border border-red-500/30"
+                style={{ filter: "brightness(0.9) contrast(1.1)" }}
+              />
+            </div>
           </div>
         </div>
       </div>
