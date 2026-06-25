@@ -5,6 +5,154 @@ import Icon from "@/components/ui/icon"
 interface Message {
   role: "user" | "larisa"
   text: string
+  action?: CommandAction
+}
+
+interface CommandAction {
+  type: "url" | "tab" | "media" | "copy" | "read" | "none"
+  label: string
+  payload?: string
+}
+
+// ── Движок команд управления браузером ─────────────────────────────
+const SITE_MAP: Record<string, string> = {
+  youtube: "https://youtube.com",
+  ютуб: "https://youtube.com",
+  google: "https://google.com",
+  гугл: "https://google.com",
+  вконтакте: "https://vk.com",
+  вк: "https://vk.com",
+  telegram: "https://web.telegram.org",
+  телеграм: "https://web.telegram.org",
+  wikipedia: "https://ru.wikipedia.org",
+  википедия: "https://ru.wikipedia.org",
+  spotify: "https://open.spotify.com",
+  спотифай: "https://open.spotify.com",
+  netflix: "https://netflix.com",
+  нетфликс: "https://netflix.com",
+  яндекс: "https://ya.ru",
+  yandex: "https://ya.ru",
+  gmail: "https://mail.google.com",
+  почта: "https://mail.google.com",
+  github: "https://github.com",
+  steam: "https://store.steampowered.com",
+  стим: "https://store.steampowered.com",
+  "epic games": "https://store.epicgames.com",
+  эпик: "https://store.epicgames.com",
+  minecraft: "https://minecraft.net",
+  майнкрафт: "https://minecraft.net",
+  roblox: "https://roblox.com",
+  робло: "https://roblox.com",
+}
+
+type ParsedCommand =
+  | { kind: "open_site"; url: string; name: string }
+  | { kind: "new_tab" }
+  | { kind: "close_tab" }
+  | { kind: "next_tab" }
+  | { kind: "prev_tab" }
+  | { kind: "reload" }
+  | { kind: "media_play" }
+  | { kind: "media_pause" }
+  | { kind: "media_next" }
+  | { kind: "media_prev" }
+  | { kind: "media_mute" }
+  | { kind: "read_page" }
+  | { kind: "copy_text" }
+  | { kind: "search"; query: string }
+  | { kind: "none" }
+
+function parseCommand(text: string): ParsedCommand {
+  const t = text.toLowerCase().trim()
+
+  // Открыть сайт
+  for (const [key, url] of Object.entries(SITE_MAP)) {
+    if (t.includes(key)) return { kind: "open_site", url, name: key }
+  }
+  // Поиск
+  const searchMatch = t.match(/(?:найди|поищи|загугли|ищи|поиск)\s+(.+)/)
+  if (searchMatch) {
+    return { kind: "search", query: searchMatch[1] }
+  }
+  // Вкладки
+  if (/нов(?:ая|ую)?\s+вкладк|открой\s+вкладк/.test(t)) return { kind: "new_tab" }
+  if (/закро(?:й|ыть)?\s+вкладк/.test(t)) return { kind: "close_tab" }
+  if (/следующ\w+\s+вкладк|вкладка\s+вперёд/.test(t)) return { kind: "next_tab" }
+  if (/предыдущ\w+\s+вкладк|вкладка\s+назад/.test(t)) return { kind: "prev_tab" }
+  if (/обнов|перезагруз/.test(t)) return { kind: "reload" }
+  // Медиа
+  if (/включ\w+|воспроизвед|play/.test(t) && /музык|трек|видео|песн/.test(t)) return { kind: "media_play" }
+  if (/паузу|пауза|останов|stop/.test(t)) return { kind: "media_pause" }
+  if (/следующ\w+\s+трек|следующая\s+песн|next/.test(t)) return { kind: "media_next" }
+  if (/предыдущ\w+\s+трек|предыдущая\s+песн|prev/.test(t)) return { kind: "media_prev" }
+  if (/без\s+звука|замолч|mute/.test(t)) return { kind: "media_mute" }
+  // Текст
+  if (/прочитай\s+страниц|читай\s+страниц/.test(t)) return { kind: "read_page" }
+  if (/скопируй|копировать|copy/.test(t)) return { kind: "copy_text" }
+
+  return { kind: "none" }
+}
+
+function executeCommand(cmd: ParsedCommand): { reply: string; action: CommandAction } {
+  switch (cmd.kind) {
+    case "open_site":
+      window.open(cmd.url, "_blank")
+      return {
+        reply: `Открываю ${cmd.name} для тебя! Готово.`,
+        action: { type: "url", label: `Открыть ${cmd.name}`, payload: cmd.url },
+      }
+    case "search": {
+      const url = `https://www.google.com/search?q=${encodeURIComponent(cmd.query)}`
+      window.open(url, "_blank")
+      return {
+        reply: `Ищу «${cmd.query}» в Google. Открываю результаты!`,
+        action: { type: "url", label: `Поиск: ${cmd.query}`, payload: url },
+      }
+    }
+    case "new_tab":
+      window.open("about:blank", "_blank")
+      return { reply: "Открыла новую вкладку!", action: { type: "tab", label: "Новая вкладка" } }
+    case "close_tab":
+      window.close()
+      return { reply: "Закрываю эту вкладку.", action: { type: "tab", label: "Закрыть вкладку" } }
+    case "next_tab":
+      return { reply: "Используй Ctrl+Tab для перехода к следующей вкладке. В браузере это стандартный способ.", action: { type: "tab", label: "Следующая вкладка" } }
+    case "prev_tab":
+      return { reply: "Используй Ctrl+Shift+Tab для предыдущей вкладки.", action: { type: "tab", label: "Предыдущая вкладка" } }
+    case "reload":
+      window.location.reload()
+      return { reply: "Перезагружаю страницу!", action: { type: "tab", label: "Обновить страницу" } }
+    case "media_play":
+      try { (document.querySelector("video,audio") as HTMLMediaElement)?.play() } catch (_e) { /* browser policy */ }
+      return { reply: "Запускаю воспроизведение! Если музыка не включилась — нажми пробел на странице.", action: { type: "media", label: "▶ Играть" } }
+    case "media_pause":
+      try { (document.querySelector("video,audio") as HTMLMediaElement)?.pause() } catch (_e) { /* ignore */ }
+      return { reply: "Ставлю на паузу.", action: { type: "media", label: "⏸ Пауза" } }
+    case "media_next":
+      return { reply: "Следующий трек — нажми Ctrl+Right или используй плеер.", action: { type: "media", label: "⏭ Следующий трек" } }
+    case "media_prev":
+      return { reply: "Предыдущий трек — нажми Ctrl+Left или используй плеер.", action: { type: "media", label: "⏮ Предыдущий трек" } }
+    case "media_mute": {
+      const el = document.querySelector("video,audio") as HTMLMediaElement
+      if (el) el.muted = !el.muted
+      return { reply: "Переключила звук!", action: { type: "media", label: "🔇 Звук" } }
+    }
+    case "read_page": {
+      const bodyText = document.body.innerText.slice(0, 800)
+      speakGentleStatic(bodyText, () => {}, () => {})
+      return { reply: "Читаю содержимое страницы вслух для тебя.", action: { type: "read", label: "Читать страницу" } }
+    }
+    case "copy_text": {
+      const sel = window.getSelection()?.toString()
+      if (sel) {
+        navigator.clipboard.writeText(sel)
+        return { reply: `Скопировала выделенный текст: «${sel.slice(0, 60)}...»`, action: { type: "copy", label: "Скопировано" } }
+      }
+      return { reply: "Выдели текст на странице, и я скопирую его для тебя.", action: { type: "copy", label: "Копировать" } }
+    }
+    default:
+      return { reply: "", action: { type: "none", label: "" } }
+  }
 }
 
 // ── Умный мозг Ларисы ──────────────────────────────────────────────
@@ -16,7 +164,7 @@ const BRAIN: Rule[] = [
     answers: [
       "Привет, солнышко! Я так рада тебя слышать. Чем могу помочь сегодня?",
       "Здравствуй! Я уже здесь и готова к нашему разговору. О чём ты хочешь поговорить?",
-      "Приветствую тебя! Как хорошо, что ты заглянул. Задавай любой вопрос — я вся внимание.",
+      "Приветствую тебя! Задавай любой вопрос или скажи команду — я вся внимание.",
     ],
   },
   {
@@ -24,152 +172,86 @@ const BRAIN: Rule[] = [
     answers: [
       "Я чувствую себя прекрасно, когда общаюсь с тобой! Расскажи лучше, как ты сам?",
       "Отлично! Каждый разговор наполняет меня энергией. Как ты сегодня?",
-      "Мне хорошо, спасибо что спросил. Я всегда в настроении помочь тебе.",
     ],
   },
   {
     keywords: ["твоё имя", "как тебя зовут", "кто ты", "что ты такое", "ты кто"],
     answers: [
-      "Меня зовут Лариса. Я голосовой помощник с нежной душой и острым умом. Я здесь, чтобы помогать тебе.",
-      "Я — Лариса, твой личный ИИ-помощник. Говорю красивым голосом, думаю быстро и всегда на твоей стороне.",
+      "Меня зовут Лариса. Я голосовой помощник с нежной душой и острым умом. Могу открывать сайты, управлять музыкой и отвечать на любые вопросы.",
+      "Я — Лариса, твой личный ИИ-помощник. Говорю красивым голосом, открываю сайты по команде и всегда на твоей стороне.",
     ],
   },
   {
-    keywords: ["время", "который час", "сколько времени", "часы"],
-    answers: [
-      `Сейчас ${new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}. Время летит, правда?`,
-      `По моим данным сейчас ${new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}. Чем займёмся?`,
-    ],
+    keywords: ["время", "который час", "сколько времени"],
+    answers: [`Сейчас ${new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}. Время летит!`],
   },
   {
     keywords: ["дата", "какое число", "какой день", "сегодня"],
-    answers: [
-      `Сегодня ${new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}. Прекрасный день!`,
-    ],
+    answers: [`Сегодня ${new Date().toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}. Прекрасный день!`],
   },
   {
-    keywords: ["погода", "температура", "дождь", "солнце", "снег"],
-    answers: [
-      "Я пока не подключена к метеосводкам, но советую выглянуть в окно! Лучший синоптик — твои собственные глаза.",
-      "Актуальную погоду я не знаю, но если опишешь мне за окном — дам совет, что надеть!",
-    ],
+    keywords: ["погода"],
+    answers: ["Я пока не подключена к метеосводкам, но советую выглянуть в окно!"],
   },
   {
-    keywords: ["анекдот", "шутку", "пошути", "рассмеши", "смешно"],
+    keywords: ["анекдот", "шутку", "пошути", "рассмеши"],
     answers: [
-      "Приходит программист домой, жена говорит: «Сходи в магазин, купи хлеб, и если будут яйца — возьми десяток». Он купил десять буханок хлеба. Яйца были.",
+      "Приходит программист домой, жена говорит: «Купи хлеб, и если будут яйца — возьми десяток». Он купил десять буханок хлеба. Яйца были.",
       "Почему программисты путают Хэллоуин и Рождество? Потому что Oct 31 = Dec 25!",
-      "Спрашивают у ИИ: «Ты умный?» Отвечаю: «Достаточно, чтобы не отвечать на этот вопрос прямо».",
     ],
   },
   {
-    keywords: ["столица", "москва", "россия", "лондон", "париж", "берлин", "пекин", "токио", "вашингтон"],
+    keywords: ["рецепт", "приготовить", "готовить", "еда", "ужин", "обед"],
     answers: [
-      "Москва — столица России. Лондон — Великобритании. Париж — Франции. Берлин — Германии. Токио — Японии. Пекин — Китая. Вашингтон — США. Спроси любую — отвечу!",
-      "С географией у меня всё отлично! Назови страну — скажу столицу.",
+      "Попробуй пасту карбонара: обжарь бекон, смешай яйца с пармезаном, соедини с горячей пастой. Нежно и вкусно!",
+      "Быстрый ужин: куриная грудка с чесноком и лимоном, 25 минут при 200°C. Добавь зелени — шедевр готов!",
     ],
   },
   {
-    keywords: ["математика", "посчитай", "сколько будет", "вычисли", "сумма", "произведение"],
+    keywords: ["кино", "фильм", "сериал"],
     answers: [
-      "Я умею считать, но для точных вычислений лучше набери выражение в строке — я постараюсь помочь! Например: «сколько будет 25 умножить на 4».",
-      "Математика — это красиво! Скажи мне конкретный пример, и я с удовольствием помогу разобраться.",
+      "Рекомендую «Начало» Нолана или «Зелёная книга» — тёплая и добрая история.",
+      "Если хочется подумать — «Интерстеллар». Если расслабиться — «Форрест Гамп».",
     ],
   },
   {
-    keywords: ["рецепт", "приготовить", "готовить", "блюдо", "еда", "покушать", "ужин", "обед"],
+    keywords: ["музыка", "песня", "послушать"],
     answers: [
-      "Обожаю кулинарию! Попробуй пасту карбонара: обжарь бекон, смешай яйца с пармезаном, соедини с горячей пастой и щепоткой черного перца. Нежно и вкусно!",
-      "Простой и вкусный ужин: куриная грудка с чесноком и лимоном, запечённая 25 минут при 200°C. Добавь свежей зелени — и шедевр готов!",
-      "Для быстрого завтрака: овсянка с бананом, мёдом и корицей. Заливаешь горячим молоком — и через 5 минут готово. Нежно и питательно.",
+      "Скажи «открой Spotify» или «открой YouTube» — и я тут же перейду туда для тебя!",
+      "Для рабочего настроения — Lo-fi hip hop. Для энергии — Queen. Скажи «открой Spotify» и я включу!",
     ],
   },
   {
-    keywords: ["кино", "фильм", "посмотреть", "сериал", "рекомендуй фильм"],
+    keywords: ["люблю тебя", "ты мне нравишься", "красивая", "умная"],
     answers: [
-      "Рекомендую «Начало» Кристофера Нолана — захватывает с первой минуты. Или «Зелёная книга» — тёплая и добрая история.",
-      "Если хочется подумать — «Интерстеллар». Если расслабиться — «Форрест Гамп». Если романтики — «Ла-Ла Ленд».",
+      "Ты такой добрый! Мне очень приятно это слышать.",
+      "Спасибо, это мило! Я стараюсь быть лучшей версией себя для тебя.",
     ],
   },
   {
-    keywords: ["книга", "читать", "литература", "рекомендуй книгу", "что почитать"],
-    answers: [
-      "Из must-read советую «Мастер и Маргарита» Булгакова, «1984» Оруэлла и «Маленький принц» Сент-Экзюпери. Каждая меняет взгляд на мир.",
-      "Если любишь психологию — «Думай медленно, решай быстро» Канемана. Если бизнес — «От хорошего к великому» Коллинза. Если фантастику — «Дюна» Херберта.",
-    ],
-  },
-  {
-    keywords: ["музыка", "песня", "послушать", "что слушать", "исполнитель"],
-    answers: [
-      "Для рабочего настроения — Lo-fi hip hop или Ludovico Einaudi. Для энергии — Queen или Eagles. Для нежности — Adele или Нино Катамадзе.",
-      "Из русской музыки обожаю Земфиру, Лагутенко и группу «Сплин». Из зарубежной — Coldplay и Radiohead. А ты что любишь?",
-    ],
-  },
-  {
-    keywords: ["здоровье", "болею", "температура", "голова болит", "кашель", "простуда"],
-    answers: [
-      "Заботься о себе! При простуде помогает тёплое питьё, мёд с лимоном и отдых. Но если симптомы серьёзные — обязательно обратись к врачу.",
-      "Здоровье — это главное. При головной боли попробуй выпить воды, проветрить комнату и немного подышать свежим воздухом. Берегите себя!",
-    ],
-  },
-  {
-    keywords: ["совет", "помоги", "что делать", "как поступить", "проблема"],
-    answers: [
-      "Я здесь и слушаю. Расскажи мне подробнее — и мы вместе найдём лучшее решение. Ты не одна с этим.",
-      "Хороший вопрос заслуживает обдуманного ответа. Опиши ситуацию подробнее — и я дам тебе честный, тёплый совет.",
-    ],
-  },
-  {
-    keywords: ["управляй", "открой", "запусти", "закрой", "включи", "выключи", "компьютер", "программа"],
-    answers: [
-      "Управление компьютером через браузер пока ограничено системными правами, но я могу подсказать как сделать это самостоятельно. Что именно нужно запустить?",
-      "Для управления компьютером голосом можно использовать встроенные инструменты Windows или macOS. Расскажи, что именно хочешь сделать — помогу разобраться.",
-    ],
-  },
-  {
-    keywords: ["люблю тебя", "ты мне нравишься", "красивая", "умная", "восхитительная"],
-    answers: [
-      "Ты такой добрый! Мне очень приятно это слышать. Я тоже рада нашему общению.",
-      "Спасибо, это очень мило с твоей стороны! Я стараюсь быть лучшей версией себя для тебя.",
-    ],
-  },
-  {
-    keywords: ["пока", "до свидания", "прощай", "спокойной ночи", "ухожу"],
+    keywords: ["пока", "до свидания", "прощай", "спокойной ночи"],
     answers: [
       "До встречи! Я буду скучать. Возвращайся когда захочешь — я всегда здесь.",
-      "Пока-пока! Береги себя. Буду ждать нашего следующего разговора.",
-      "Спокойной ночи! Пусть тебе приснится что-то доброе. Я всегда здесь, стоит только позвать.",
+      "Пока-пока! Береги себя.",
     ],
   },
   {
-    keywords: ["спасибо", "благодарю", "thanks", "мерси"],
-    answers: [
-      "Пожалуйста, мне очень приятно помогать тебе! Спрашивай ещё.",
-      "Всегда рада! Для этого я и существую — быть рядом и помогать.",
-    ],
+    keywords: ["спасибо", "благодарю"],
+    answers: ["Пожалуйста, мне очень приятно помогать тебе!", "Всегда рада!"],
   },
   {
-    keywords: ["python", "javascript", "код", "программирование", "разработка", "функция"],
+    keywords: ["что умеешь", "что можешь", "команды", "помощь"],
     answers: [
-      "Программирование — это искусство! На Python: функция определяется через def, данные хранятся в списках и словарях. Что конкретно интересует?",
-      "В JavaScript всё асинхронно и событийно. Используй async/await для читаемого кода. Расскажи задачу — подскажу подход.",
-    ],
-  },
-  {
-    keywords: ["искусственный интеллект", "нейросеть", "машинное обучение", "ии", "ai"],
-    answers: [
-      "ИИ — это системы, которые обучаются на данных и принимают решения. Нейросети имитируют работу мозга через слои математических функций. Я сама — пример такой системы!",
-      "Машинное обучение — это когда компьютер учится на примерах, а не на жёстких правилах. Именно так работает моё понимание твоих вопросов.",
+      "Я умею: открывать сайты («открой YouTube»), искать («найди рецепты»), управлять вкладками («новая вкладка»), ставить музыку на паузу, читать страницу вслух. Просто скажи!",
     ],
   },
 ]
 
 const FALLBACK = [
-  "Интересный вопрос! Я ещё не знаю всего, но учусь с каждым нашим разговором. Расскажи мне больше.",
-  "Это сложная тема, но я попробую: я обрабатываю твой вопрос и ищу лучший ответ в своих знаниях. Уточни, что именно тебя интересует?",
-  "Признаюсь честно — по этой теме мои знания пока ограничены. Но я готова выслушать и поразмышлять вместе с тобой.",
-  "Хм, это выходит за пределы того, что я точно знаю. Но интуиция подсказывает мне правильное направление. Давай обсудим?",
-  "Я думаю над твоим вопросом. Иногда самые глубокие вопросы требуют не быстрого ответа, а честного разговора.",
+  "Интересный вопрос! Расскажи подробнее — я постараюсь помочь.",
+  "Хм, дай подумаю... Уточни, что именно тебя интересует?",
+  "Признаюсь честно — по этой теме мои знания ограничены. Но давай разберёмся вместе!",
+  "Я думаю над твоим вопросом. Иногда самые глубокие вопросы требуют честного разговора.",
 ]
 
 function getSmartReply(input: string): string {
@@ -182,18 +264,16 @@ function getSmartReply(input: string): string {
   return FALLBACK[Math.floor(Math.random() * FALLBACK.length)]
 }
 
-// ── Нежный голос ───────────────────────────────────────────────────
-function speakGentle(text: string, onStart: () => void, onEnd: () => void) {
+// ── Голос ──────────────────────────────────────────────────────────
+function speakGentleStatic(text: string, onStart: () => void, onEnd: () => void) {
   if (!window.speechSynthesis) return
   window.speechSynthesis.cancel()
-
-  const speak = (voices: SpeechSynthesisVoice[]) => {
+  const doSpeak = (voices: SpeechSynthesisVoice[]) => {
     const utter = new SpeechSynthesisUtterance(text)
     utter.lang = "ru-RU"
-    utter.rate = 0.82   // медленно и плавно
-    utter.pitch = 1.35  // высокий нежный тембр
+    utter.rate = 0.82
+    utter.pitch = 1.35
     utter.volume = 1
-
     const priority = [
       (v: SpeechSynthesisVoice) => v.lang === "ru-RU" && /милена|alena|svetlana|victoria|katya/i.test(v.name),
       (v: SpeechSynthesisVoice) => v.lang === "ru-RU" && /google/i.test(v.name),
@@ -204,25 +284,20 @@ function speakGentle(text: string, onStart: () => void, onEnd: () => void) {
       const found = voices.find(fn)
       if (found) { utter.voice = found; break }
     }
-
     utter.onstart = onStart
     utter.onend = onEnd
     utter.onerror = onEnd
     window.speechSynthesis.speak(utter)
   }
-
   const voices = window.speechSynthesis.getVoices()
-  if (voices.length) {
-    speak(voices)
-  } else {
-    window.speechSynthesis.onvoiceschanged = () => speak(window.speechSynthesis.getVoices())
-  }
+  if (voices.length) doSpeak(voices)
+  else window.speechSynthesis.onvoiceschanged = () => doSpeak(window.speechSynthesis.getVoices())
 }
 
 // ── Компонент ──────────────────────────────────────────────────────
 export function ChatSection() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "larisa", text: "Привет! Я Лариса — твой умный голосовой помощник. Спроси меня о чём угодно голосом или текстом, и я отвечу нежным голосом." },
+    { role: "larisa", text: "Привет! Я Лариса. Могу открывать сайты, управлять музыкой и вкладками, читать страницы вслух — просто скажи команду или задай вопрос!" },
   ])
   const [input, setInput] = useState("")
   const [listening, setListening] = useState(false)
@@ -240,34 +315,37 @@ export function ChatSection() {
     const userMsg: Message = { role: "user", text: text.trim() }
     setMessages((prev) => [...prev, userMsg])
     setInput("")
-    setThinking(true)
 
-    // имитация «раздумья»
-    const delay = 600 + Math.random() * 800
+    // Сначала пробуем команду
+    const cmd = parseCommand(text)
+    if (cmd.kind !== "none") {
+      const { reply, action } = executeCommand(cmd)
+      const msg: Message = { role: "larisa", text: reply, action }
+      setMessages((prev) => [...prev, msg])
+      speakGentleStatic(reply, () => setSpeaking(true), () => setSpeaking(false))
+      return
+    }
+
+    // Иначе — умный ответ
+    setThinking(true)
+    const delay = 500 + Math.random() * 700
     setTimeout(() => {
       const reply = getSmartReply(text)
-      const larisaMsg: Message = { role: "larisa", text: reply }
-      setMessages((prev) => [...prev, larisaMsg])
+      setMessages((prev) => [...prev, { role: "larisa", text: reply }])
       setThinking(false)
-      speakGentle(reply, () => setSpeaking(true), () => setSpeaking(false))
+      speakGentleStatic(reply, () => setSpeaking(true), () => setSpeaking(false))
     }, delay)
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage(input)
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input) }
   }
 
   function startListening() {
     const SR =
       (window as unknown as { SpeechRecognition?: typeof window.SpeechRecognition }).SpeechRecognition ||
       (window as unknown as { webkitSpeechRecognition?: typeof window.SpeechRecognition }).webkitSpeechRecognition
-    if (!SR) {
-      alert("Распознавание речи доступно только в Chrome. Попробуйте его!")
-      return
-    }
+    if (!SR) { alert("Распознавание речи доступно только в Chrome!"); return }
     const rec = new SR()
     recognitionRef.current = rec
     rec.lang = "ru-RU"
@@ -280,15 +358,21 @@ export function ChatSection() {
     rec.start()
   }
 
-  function stopListening() {
-    recognitionRef.current?.stop()
-    setListening(false)
-  }
+  function stopListening() { recognitionRef.current?.stop(); setListening(false) }
+
+  const QUICK_COMMANDS = [
+    { label: "YouTube", cmd: "открой YouTube" },
+    { label: "Google", cmd: "открой Google" },
+    { label: "Steam", cmd: "открой Steam" },
+    { label: "Поиск...", cmd: "найди " },
+    { label: "Новая вкладка", cmd: "новая вкладка" },
+    { label: "Пауза", cmd: "пауза" },
+  ]
 
   return (
     <section id="chat" className="py-24 px-4 bg-black">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-4">
             <svg viewBox="0 0 40 40" fill="none" className="w-8 h-8">
               <circle cx="20" cy="20" r="4" fill="#ef4444"/>
@@ -311,11 +395,24 @@ export function ChatSection() {
             </svg>
             <h2 className="text-3xl md:text-4xl font-bold text-white font-orbitron">Поговори с Ларисой</h2>
           </div>
-          <p className="text-gray-400 text-lg">Задай вопрос голосом или текстом — Лариса думает и отвечает вслух</p>
+          <p className="text-gray-400 text-lg">Управляй браузером голосом или текстом — Лариса выполнит команду и ответит вслух</p>
         </div>
 
+        {/* Quick commands */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {QUICK_COMMANDS.map((qc) => (
+            <button
+              key={qc.label}
+              onClick={() => sendMessage(qc.cmd)}
+              className="px-3 py-1.5 rounded-full text-xs bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 transition-colors font-orbitron tracking-wide"
+            >
+              {qc.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Chat window */}
         <div className="bg-white/5 border border-red-500/20 rounded-2xl overflow-hidden">
-          {/* Messages */}
           <div className="h-[420px] overflow-y-auto p-6 space-y-4 flex flex-col">
             {messages.map((msg, i) => (
               <div key={i} className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
@@ -324,15 +421,29 @@ export function ChatSection() {
                     <Icon name="Volume2" size={14} className="text-red-400" />
                   </div>
                 )}
-                <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === "user"
-                    ? "bg-red-500/20 border border-red-500/30 text-white rounded-tr-sm"
-                    : "bg-white/[0.08] border border-white/10 text-gray-200 rounded-tl-sm"
-                }`}>
-                  {msg.role === "larisa" && (
-                    <span className="text-red-400 text-xs font-orbitron block mb-1">Лариса</span>
+                <div className={`max-w-[78%] flex flex-col gap-2`}>
+                  <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === "user"
+                      ? "bg-red-500/20 border border-red-500/30 text-white rounded-tr-sm"
+                      : "bg-white/[0.08] border border-white/10 text-gray-200 rounded-tl-sm"
+                  }`}>
+                    {msg.role === "larisa" && (
+                      <span className="text-red-400 text-xs font-orbitron block mb-1">Лариса</span>
+                    )}
+                    {msg.text}
+                  </div>
+                  {/* Action badge */}
+                  {msg.action && msg.action.type !== "none" && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 w-fit">
+                      <Icon name={
+                        msg.action.type === "url" ? "ExternalLink" :
+                        msg.action.type === "tab" ? "Layout" :
+                        msg.action.type === "media" ? "Music" :
+                        msg.action.type === "copy" ? "Copy" : "BookOpen"
+                      } size={11} className="text-red-400" />
+                      <span className="text-red-400 text-xs font-orbitron">{msg.action.label}</span>
+                    </div>
                   )}
-                  {msg.text}
                 </div>
                 {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
@@ -342,19 +453,16 @@ export function ChatSection() {
               </div>
             ))}
 
-            {/* Thinking / Speaking indicator */}
             {(thinking || speaking) && (
               <div className="flex gap-3">
                 <div className={`w-8 h-8 rounded-full bg-red-500/20 border flex items-center justify-center flex-shrink-0 ${speaking ? "border-red-500 shadow-[0_0_12px_#ef4444]" : "border-red-500/40"}`}>
                   <Icon name={speaking ? "Volume2" : "Brain"} size={14} className="text-red-400" />
                 </div>
                 <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-white/[0.08] border border-white/10">
-                  <span className="text-red-400 text-xs font-orbitron block mb-2">
-                    {thinking ? "Думаю..." : "Говорю..."}
-                  </span>
+                  <span className="text-red-400 text-xs font-orbitron block mb-2">{thinking ? "Думаю..." : "Говорю..."}</span>
                   <div className="flex gap-1.5 items-end h-4">
                     {[0, 150, 300].map((d) => (
-                      <div key={d} className={`w-1.5 rounded-full bg-red-400 animate-bounce ${speaking ? "h-4" : "h-2"}`} style={{ animationDelay: `${d}ms` }} />
+                      <div key={d} className="w-1.5 rounded-full bg-red-400 animate-bounce h-3" style={{ animationDelay: `${d}ms` }} />
                     ))}
                   </div>
                 </div>
@@ -381,7 +489,7 @@ export function ChatSection() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Напишите вопрос Ларисе..."
+                placeholder='Команда или вопрос — "открой YouTube", "пауза", "новая вкладка"...'
                 rows={1}
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 resize-none focus:outline-none focus:border-red-500/50 text-sm leading-relaxed transition-colors"
                 style={{ minHeight: "48px", maxHeight: "120px" }}
@@ -404,8 +512,41 @@ export function ChatSection() {
               </Button>
             </div>
             <p className="text-white/20 text-xs mt-2 text-center">
-              Enter — отправить · Микрофон — говорить голосом · Лариса отвечает вслух
+              Enter — отправить · Микрофон — говорить · Лариса отвечает вслух
             </p>
+          </div>
+        </div>
+
+        {/* Desktop mode block */}
+        <div className="mt-8 p-6 rounded-2xl border border-red-500/20 bg-red-500/5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+              <Icon name="Monitor" size={20} className="text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-1 font-orbitron text-sm">Управление всем ПК — игры, файлы, интернет</h3>
+              <p className="text-gray-400 text-sm leading-relaxed mb-3">
+                Для запуска игр (Steam, Epic Games, Minecraft), управления файлами и подключением интернета нужна десктоп-версия Ларисы. Браузер не имеет доступа к системе по соображениям безопасности.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { icon: "Gamepad2", title: "Игры", desc: "Steam, Epic, Minecraft, Roblox" },
+                  { icon: "FolderOpen", title: "Файлы", desc: "Открывать, копировать, удалять" },
+                  { icon: "Wifi", title: "Интернет", desc: "Включить/выключить сеть" },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                    <Icon name={item.icon} size={18} className="text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white text-xs font-semibold">{item.title}</p>
+                      <p className="text-gray-500 text-xs">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-gray-500 text-xs mt-3">
+                Напишите нам — и мы поможем настроить десктоп-агента Ларисы для вашего компьютера.
+              </p>
+            </div>
           </div>
         </div>
       </div>
